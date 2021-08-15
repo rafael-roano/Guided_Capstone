@@ -1,4 +1,3 @@
-
 from pyspark.sql import SparkSession
 from pyspark.sql.types import StructType, StructField, StringType, DateType, IntegerType, TimestampType, DecimalType
 import json
@@ -6,10 +5,10 @@ from datetime import datetime
 from decimal import Decimal
 
 
-# Creating Spark Session 
+# Create Spark Session 
 spark = SparkSession.builder.master("local").appName("parser").getOrCreate()
 
-# Setting up access key for Azure blob storage 
+# Set up access key for Azure blob storage 
 sc = spark.sparkContext
 sc._jsc.hadoopConfiguration().set("fs.wasbs.impl", "org.apache.hadoop.fs.azure.NativeAzureFileSystem")
 sc._jsc.hadoopConfiguration().set("fs.azure.account.key.springcapitalstoragerr.blob.core.windows.net", "")
@@ -63,7 +62,7 @@ def parse_json(line:str):
     '''Parse RDD row (read from json file) based on transaction type.
             
     Args:
-        line (str): 
+        line (str): Transaction details
     
     Returns:
         event (list)
@@ -116,7 +115,7 @@ def parse_csv(line:str):
     '''Parse RDD row (read from csv file) based on transaction type.
             
     Args:
-        line (str): 
+        line (str): Transaction details
     
     Returns:
         event (list)
@@ -158,7 +157,7 @@ def parse_csv(line:str):
         return common_event("","","","","","","","","B", linex = line)
 
 
-# Defining schema
+# Define schema
 EventType = StructType([
     StructField("trade_dt", DateType(), True),
     StructField("rec_type", StringType(), True),
@@ -177,22 +176,24 @@ EventType = StructType([
 ])
 
 
-# Reading and parsing CSV file from Azure blob storage
-raw_csv =spark.sparkContext.textFile("wasbs://data@springcapitalstoragerr.blob.core.windows.net/csv/2020-08-05/NYSE")
+# Read and parse CSV file from Azure blob storage
+current_date = "2020-08-06"
+raw_csv =spark.sparkContext.textFile(f"wasbs://data@springcapitalstoragerr.blob.core.windows.net/csv/{current_date}/NYSE")
 parsed_csv = raw_csv.map(lambda line: parse_csv(line))
 
-# Reading and parsing json file from Azure blob storage
-raw_json =spark.sparkContext.textFile("wasbs://data@springcapitalstoragerr.blob.core.windows.net/json/2020-08-05/NASDAQ")
+# Read and parse json file from Azure blob storage
+raw_json =spark.sparkContext.textFile(f"wasbs://data@springcapitalstoragerr.blob.core.windows.net/json/{current_date}/NASDAQ")
 parsed_json = raw_json.map(lambda line: parse_json(line))
 
-# Reading RDDs into Dataframes with defined Schema
+# Read RDDs into Dataframes with defined Schema
 df_csv = spark.createDataFrame(parsed_csv, schema=EventType)
 df_json = spark.createDataFrame(parsed_json, schema=EventType)
 
-# Combining dataframes and save them 
+# Combine dataframes
 output = df_csv.union(df_json)
-output.show()
-output.printSchema()
+# print(output.count())
+# output.show()
+# output.printSchema()
 
-# Loading partitioned data to Azure blob storage 
-output.write.partitionBy("partition").mode("overwrite").parquet("wasbs://data@springcapitalstoragerr.blob.core.windows.net/output_dir")
+# Load partitioned data to Azure blob storage 
+output.write.partitionBy("partition").mode("overwrite").parquet(f"wasbs://data@springcapitalstoragerr.blob.core.windows.net/output_dir/{current_date}")

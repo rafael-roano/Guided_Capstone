@@ -12,7 +12,7 @@ sc._jsc.hadoopConfiguration().set("fs.azure.account.key.springcapitalstoragerr.b
 
 
 def applyLatest(transactions, type):
-    '''Read DataFrame, calculate unique ID and for the records with the same unique ID, the one with the most recent arrival timestamp is accepted.
+    '''Read DataFrame, build unique ID and for the records with the same unique ID, the one with the most recent arrival timestamp is accepted.
             
     Args:
         transaction (DataFrame): Records array
@@ -39,8 +39,9 @@ def applyLatest(transactions, type):
     return corrected_result
 
 # Reading Parquet files from Azure blob storage
-trade_common = spark.read.parquet("wasbs://data@springcapitalstoragerr.blob.core.windows.net/output_dir/partition=T")
-quote_common = spark.read.parquet("wasbs://data@springcapitalstoragerr.blob.core.windows.net/output_dir/partition=Q")
+current_date = "2020-08-06"
+trade_common = spark.read.parquet(f"wasbs://data@springcapitalstoragerr.blob.core.windows.net/output_dir/{current_date}/partition=T")
+quote_common = spark.read.parquet(f"wasbs://data@springcapitalstoragerr.blob.core.windows.net/output_dir/{current_date}/partition=Q")
 
 # Selecting required fields based on transaction type
 trade = trade_common.select("trade_dt", "symbol", "exchange", "event_tm", "event_seq_nb", "arrival_tm", "trade_pr")
@@ -48,10 +49,17 @@ quote = quote_common.select("trade_dt", "symbol", "exchange", "event_tm", "event
 
 # Filtering out outdated records
 trade_corrected = applyLatest(trade, "T")
+trade_corrected.show()
+print(trade_corrected.count())
+
 quote_corrected = applyLatest(quote, "Q")
+quote_corrected.show()
+print(quote_corrected.count())
+
+
 
 # Loading corrected data to Azure blob storage 
-trade_corrected_date = "2020-08-05"
-quote_corrected_date = "2020-08-05"
-trade_corrected.write.parquet("wasbs://data@springcapitalstoragerr.blob.core.windows.net/trade/trade_dt={}".format(trade_corrected_date))
-quote_corrected.write.parquet("wasbs://data@springcapitalstoragerr.blob.core.windows.net/quote/quote_dt={}".format(quote_corrected_date))
+# trade_corrected.write.mode("overwrite").parquet("wasbs://data@springcapitalstoragerr.blob.core.windows.net/trade/trade_dt={}".format(current_date))
+# quote_corrected.write.mode("overwrite").parquet("wasbs://data@springcapitalstoragerr.blob.core.windows.net/quote/quote_dt={}".format(current_date))
+trade_corrected.write.mode("append").parquet("wasbs://data@springcapitalstoragerr.blob.core.windows.net/trade")
+quote_corrected.write.mode("append").parquet("wasbs://data@springcapitalstoragerr.blob.core.windows.net/quote")
