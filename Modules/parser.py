@@ -177,7 +177,7 @@ EventType = StructType([
 
 
 # Read and parse CSV file from Azure blob storage
-current_date = "2020-08-06"
+current_date = "2020-08-05"
 raw_csv =spark.sparkContext.textFile(f"wasbs://data@springcapitalstoragerr.blob.core.windows.net/csv/{current_date}/NYSE")
 parsed_csv = raw_csv.map(lambda line: parse_csv(line))
 
@@ -192,8 +192,9 @@ df_json = spark.createDataFrame(parsed_json, schema=EventType)
 # Combine dataframes
 output = df_csv.union(df_json)
 # print(output.count())
-# output.show()
 # output.printSchema()
+# output.show(output.count())
+
 
 # Load partitioned data to Azure blob storage 
 output.write.partitionBy("partition").mode("overwrite").parquet(f"wasbs://data@springcapitalstoragerr.blob.core.windows.net/output_dir/{current_date}")
