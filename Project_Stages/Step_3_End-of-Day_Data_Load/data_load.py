@@ -1,13 +1,18 @@
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
+import sys
+  
+sys.path.append("C:\\Users\\FBLServer\\Documents\\c\\")
+import configocp
 
 # Creating Spark Session 
 spark = SparkSession.builder.master("local").appName("data_load").getOrCreate()
 
-# Setting up access key for Azure blob storage 
+# Setting up access key for Azure blob storage
+az_key = configocp.a_k
 sc = spark.sparkContext
 sc._jsc.hadoopConfiguration().set("fs.wasbs.impl", "org.apache.hadoop.fs.azure.NativeAzureFileSystem")
-sc._jsc.hadoopConfiguration().set("fs.azure.account.key.springcapitalstoragerr.blob.core.windows.net", "")
+sc._jsc.hadoopConfiguration().set("fs.azure.account.key.springcapitalstoragerr.blob.core.windows.net", az_key)
 
 
 def applyLatest(transactions, type):

@@ -3,15 +3,20 @@ from pyspark.sql.types import StructType, StructField, StringType, DateType, Int
 import json
 from datetime import datetime
 from decimal import Decimal
+import sys
 
+
+sys.path.append("C:\\Users\\FBLServer\\Documents\\c\\")
+import configocp
 
 # Create Spark Session 
 spark = SparkSession.builder.master("local").appName("parser").getOrCreate()
 
 # Set up access key for Azure blob storage 
+az_key = configocp.a_k
 sc = spark.sparkContext
 sc._jsc.hadoopConfiguration().set("fs.wasbs.impl", "org.apache.hadoop.fs.azure.NativeAzureFileSystem")
-sc._jsc.hadoopConfiguration().set("fs.azure.account.key.springcapitalstoragerr.blob.core.windows.net", "")
+sc._jsc.hadoopConfiguration().set("fs.azure.account.key.springcapitalstoragerr.blob.core.windows.net", az_key)
 
 
 def common_event(col0_val, col1_val, col2_val, col3_val, col4_val, col5_val, col6_val, col7_val, transaction, col8_val=None, col9_val=None, col10_val=None, linex=None):
@@ -56,7 +61,7 @@ def common_event(col0_val, col1_val, col2_val, col3_val, col4_val, col5_val, col
         
         return [None, None, None, None, None, None, None, None, None, None, None, None, "B", linex]
 
-   
+
 def parse_json(line:str):
 
     '''Parse RDD row (read from json file) based on transaction type.
@@ -98,11 +103,11 @@ def parse_json(line:str):
             or not record["exchange"] or not record["price"]:            
 
                 raise Exception  
-              
+            
             event = common_event(record["trade_dt"], record["file_tm"], record["event_type"],\
                     record["symbol"], record["event_tm"], record["event_seq_nb"],\
                     record["exchange"], record["price"], "T")
-                               
+                            
             return event
         
     except Exception:
@@ -176,6 +181,7 @@ EventType = StructType([
 ])
 
 
+
 # Read and parse CSV file from Azure blob storage
 current_date = "2020-08-05"
 raw_csv =spark.sparkContext.textFile(f"wasbs://data@springcapitalstoragerr.blob.core.windows.net/csv/{current_date}/NYSE")
@@ -198,3 +204,4 @@ output = df_csv.union(df_json)
 
 # Load partitioned data to Azure blob storage 
 output.write.partitionBy("partition").mode("overwrite").parquet(f"wasbs://data@springcapitalstoragerr.blob.core.windows.net/output_dir/{current_date}")
+

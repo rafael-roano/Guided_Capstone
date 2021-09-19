@@ -2,13 +2,19 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import broadcast
 import datetime
 
+import sys
+  
+sys.path.append("C:\\Users\\FBLServer\\Documents\\c\\")
+import configocp
+
 # Creating Spark Session 
 spark = SparkSession.builder.master("local").appName("analytical_etl").getOrCreate()
 
-# Setting up access key for Azure blob storage 
+# Setting up access key for Azure blob storage
+az_key = configocp.a_k
 sc = spark.sparkContext
 sc._jsc.hadoopConfiguration().set("fs.wasbs.impl", "org.apache.hadoop.fs.azure.NativeAzureFileSystem")
-sc._jsc.hadoopConfiguration().set("fs.azure.account.key.springcapitalstoragerr.blob.core.windows.net", "")
+sc._jsc.hadoopConfiguration().set("fs.azure.account.key.springcapitalstoragerr.blob.core.windows.net", az_key)
 
 # Read trade Parquet file from Azure blob storage partition and create temp view
 current_date = "2020-08-06"
@@ -207,6 +213,6 @@ quote_final = spark.sql("""
 
 """)
 
-quote_final.show(quote_final.count(), True)
+# quote_final.show(quote_final.count(), True)
 
 quote_final.write.mode("overwrite").parquet(f"wasbs://data@springcapitalstoragerr.blob.core.windows.net/quote-trade-analytical/date={current_date}")
